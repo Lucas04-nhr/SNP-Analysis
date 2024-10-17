@@ -4,3 +4,37 @@
 # R Language
 *.RData
 *.Rhistory
+
+# RStudio
+.Rproj.user/
+*.Rproj
+
+# R environment
+.Renviron
+.Rprofile
+
+# R package
+.Rcheck/
+.Rcache/
+
+# R Markdown
+*_cache/
+*_files/
+
+# R bookdown
+_bookdown_files/
+_bookdown_files.yml
+
+# R knitr
+*.utf8.md
+*.utf8.Rmd
+*.utf8.rmd
+
+# VS Code
+.vscode/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# JetBrains
+.idea/
