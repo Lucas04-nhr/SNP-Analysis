@@ -38,3 +38,6 @@ _bookdown_files.yml
 
 # JetBrains
 .idea/
+
+# Python
+results/
