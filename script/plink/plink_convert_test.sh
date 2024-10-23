@@ -7,7 +7,7 @@
 
 # Initialize the environment
 echo "THIS IS A TEST SCRIPT FOR PLINK CONVERTING."
-echo "IF YOU RUN THIS SCRIPT BY MISSTAKE, PLEASE PRESS CTRL+C TO TERMINATE THE JOB."
+echo "IF YOU RUN THIS SCRIPT BY MISSTAKE, PLEASE USE SCANCEL TO TERMINATE THE JOB."
 sleep 5
 echo "=============================="
 echo "Initializing the environment..."
