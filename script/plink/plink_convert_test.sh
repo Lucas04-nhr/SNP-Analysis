@@ -45,6 +45,7 @@ export VARIANTRECALIBRATOR_DATA_PATH="$BASE_PATH/09_VariantRecalibrator"
 export APPLYVQSR_DATA_PATH="$BASE_PATH/10_ApplyVQSR"
 export TEST_VCF_PATH="$BASE_PATH/11_ConvertedVCF"
 export PLINK_BASE_PATH="$BASE_PATH/12_plink"
+# Add more sub-folders of plink here...
 
 echo "The sorted *.bam files are located in $SORTED_DATA_PATH."
 echo "The indexing data is located in $INDEXING_PATH."
@@ -57,9 +58,8 @@ echo "The VariantRecalibrator results are located in $VARIANTRECALIBRATOR_DATA_P
 echo "The ApplyVQSR results are located in $APPLYVQSR_DATA_PATH."
 echo "The converted VCF files are located in $TEST_VCF_PATH."
 echo "The plink files will be located in $PLINK_BASE_PATH."
+# Add prompts of more sub-folders of plink here...
 
 echo "Initializing completed."
 echo "=============================="
-
-
 
