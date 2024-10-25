@@ -41,3 +41,6 @@ _bookdown_files.yml
 
 # Python
 results/
+
+# Other data
+data
