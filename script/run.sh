@@ -1,1 +1,1 @@
-../../bin/plink/plink --bfile converted_genotyped --linear --pheno phenotype.tsv --all-pheno --covar covariate.tsv --covar-number 5 --out result --noweb --allow-extra-chr --allow-no-sex
+../../bin/plink/plink --bfile converted_genotyped --linear --pheno phenotype.tsv --all-pheno --covar covariate.tsv --covar-number 3 --out result --noweb --allow-extra-chr --allow-no-sex
