@@ -91,9 +91,12 @@ for snp in snp_data:
     snp["gene_id"] = None
 
 # Post-process the data
+print("Post-processing the data...")
 snp_data = pd.DataFrame(snp_data)
 # Combine the SNP chromosome and position into a single column
 snp_data["SNP"] = snp_data["chromosome"] + ":" + snp_data["position"].astype(str)
 
 # Save the results to a CSV file
+print(f"Saving the results to {output_file}")
 output_data.to_csv(output_file, index=False)
+print("Done.")
