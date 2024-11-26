@@ -108,6 +108,13 @@ print("Post-processing the data...")
 snp_data = pd.DataFrame(snp_data)
 # Combine the SNP chromosome and position into a single column
 snp_data["SNP"] = snp_data["chromosome"] + ":" + snp_data["position"].astype(str)
+# Move the SNP column to the first column
+columns = snp_data.columns.tolist()
+columns = columns[-1:] + columns[:-1]
+snp_data = snp_data[columns]
+# Delete the chromosome and position columns
+snp_data = snp_data.drop(columns=["chromosome", "position"])
+print("Post-processing is done.")
 
 # Save the results to a CSV file
 print(f"Saving the results to {output_file}")
