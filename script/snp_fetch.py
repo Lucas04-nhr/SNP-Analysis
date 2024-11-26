@@ -5,7 +5,7 @@ import argparse
 import pandas as pd
 import numpy as np
 
-# 设置 Entrez 的电子邮件
+# Set the email address for NCBI Entrez
 Entrez.email = "lucas04@hust.edu.cn"
 
 def read_snp_data(input_file):
