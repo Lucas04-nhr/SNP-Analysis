@@ -83,7 +83,3 @@ for snp in snp_data:
 # Save the results to a CSV file
 output_data = pd.DataFrame(snp_data)
 output_data.to_csv(output_file, index=False)
-
-
-
-
