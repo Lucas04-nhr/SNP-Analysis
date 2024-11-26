@@ -8,6 +8,15 @@ import numpy as np
 # Set the email address for NCBI Entrez
 Entrez.email = "lucas04@hust.edu.cn"
 
+def internet_check():
+  # Check Internet connection
+  try:
+    requests.get("http://cp.cloudflare.com/generate_204")
+  except requests.ConnectionError:
+    print("No Internet connection. Please check your network settings.")
+    exit(1)
+  print("Internet connection is OK.")
+
 def read_snp_data(input_file):
   # Read SNP data from a CSV file
   data = pd.read_csv(input_file)
@@ -60,12 +69,8 @@ input_file = args.input_file
 output_file = args.output_file
 
 # Check Internet connection
-print("Checking Internet connection...")
-try:
-  requests.get("https://www.google.com")
-except requests.ConnectionError:
-  print("No Internet connection. Please check your network settings.")
-  exit(1)
+internet_check()
+
 
 # Read SNP data from a CSV file
 print(f"Reading SNP data from {input_file}")
