@@ -14,6 +14,7 @@ def read_snp_data(input_file):
   snp_list = []
   for index, row in data.iterrows():
     snp_data = row["SNP"].split(":")
+    snp = {}
     snp["chromosome"] = snp_data[0]
     snp["position"] = int(snp_data[1])
     snp_list.append(snp)
@@ -30,20 +31,22 @@ def fetch_known_snps(chromosome, position):
 
 
 def fetch_gene_annotations(chromosome, position):
+  position = int(position)
   # Fetch gene annotations from NCBI
-  url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=gene&id={chromosome}&rettype=gb&retmode=text"
+  base_url = "https://rest.ensembl.org/overlap/region/human/"
+  position_below_threshold = (position // 100) * 100
+  position_above_threshold = position_below_threshold + 100
+  other_args = "feature=gene;content-type=application/json"
+  url = f"{base_url}{chromosome}:{position_below_threshold}-{position_above_threshold}?{other_args}"
   response = requests.get(url)
   if response.status_code == 200:
-    record = SeqIO.read(response.text, "genbank")
-    for feature in record.features:
-      if feature.type == "gene":
-        if position in feature.location:
-          gene_id = feature.qualifiers.get("db_xref", [None])[0]
-          if gene_id:
-              gene_id = gene_id.split(":")[1]
-          taxon = feature.qualifiers.get("taxon", [None])[0]
-          return gene_id, taxon
-  return None, None
+    data = response.json()
+    if data:
+      return data[0]["gene_id"]
+    else:
+      return None
+  else:
+    return None
 
 
 # Phase the arguments
@@ -57,29 +60,40 @@ input_file = args.input_file
 output_file = args.output_file
 
 # Read SNP data from a CSV file
+print(f"Reading SNP data from {input_file}")
 snp_data = read_snp_data(input_file)
+print(f"Found {len(snp_data)} SNPs.")
 
+count = 0
 for snp in snp_data:
   chromosome = snp["chromosome"]
   position = snp["position"]
-
+  count += 1
+  print(f"Processing SNP {count}/{len(snp_data)}: {chromosome}:{position}...")
   # Check if the SNP is a known SNP
+  print("Checking if the SNP is a known SNP...")
   known_snp = fetch_known_snps(chromosome, position)
-
   if known_snp:
-    snp_data["known_snp"] = "Yes"
+    print("The SNP is a known SNP.")
+    snp["known_snp"] = 1
   else:
-    snp_data["known_snp"] = "No"
+    print("The SNP is not a known SNP.")
+    snp["known_snp"] = 0
 
   # Fetch gene annotations
+  print("Fetching gene annotations...")
   gene_info = fetch_gene_annotations(chromosome, position)
-  if gene_info:
-    snp_data["gene_id"] = gene_info[0]
-    snp_data["taxon"] = gene_info[1]
+  if gene_info is not None:
+    print(f"Gene ID: {gene_info}")
+    snp["gene_id"] = gene_info
   else:
-    snp_data["gene_id"] = None
-    snp_data["taxon"] = None
+    print("No gene annotations found.")
+    snp["gene_id"] = None
+
+# Post-process the data
+snp_data = pd.DataFrame(snp_data)
+# Combine the SNP chromosome and position into a single column
+snp_data["SNP"] = snp_data["chromosome"] + ":" + snp_data["position"].astype(str)
 
 # Save the results to a CSV file
-output_data = pd.DataFrame(snp_data)
 output_data.to_csv(output_file, index=False)
