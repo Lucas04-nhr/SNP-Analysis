@@ -59,6 +59,14 @@ args = parser.parse_args()
 input_file = args.input_file
 output_file = args.output_file
 
+# Check Internet connection
+print("Checking Internet connection...")
+try:
+  requests.get("https://www.google.com")
+except requests.ConnectionError:
+  print("No Internet connection. Please check your network settings.")
+  exit(1)
+
 # Read SNP data from a CSV file
 print(f"Reading SNP data from {input_file}")
 snp_data = read_snp_data(input_file)
