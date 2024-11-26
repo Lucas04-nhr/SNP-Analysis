@@ -98,5 +98,5 @@ snp_data["SNP"] = snp_data["chromosome"] + ":" + snp_data["position"].astype(str
 
 # Save the results to a CSV file
 print(f"Saving the results to {output_file}")
-output_data.to_csv(output_file, index=False)
+snp_data.to_csv(output_file, index=False)
 print("Done.")
