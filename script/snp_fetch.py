@@ -52,10 +52,10 @@ def fetch_gene_annotations(chromosome, position):
     data = response.json()
     if data:
       result = []
-      useful_data_list = ["external_name", "gene_id", "biotype", "description"]
+      gene_attributes = ["external_name", "gene_id", "biotype", "description"]
       for item in data:
-        useful_data = {key: item[key] for key in useful_data_list if key in item}
-        result.append(useful_data)
+        annotation_details = {key: item[key] for key in gene_attributes if key in item}
+        result.append(annotation_details)
       return result
     else:
       return None
