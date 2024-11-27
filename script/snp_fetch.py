@@ -43,10 +43,10 @@ def fetch_gene_annotations(chromosome, position):
   position = int(position)
   # Fetch gene annotations from NCBI
   base_url = "https://rest.ensembl.org/overlap/region/human/"
-  position_below_threshold = (position // 100) * 100
-  position_above_threshold = position_below_threshold + 100
+  position_range_start = (position // 100) * 100
+  position_range_end = position_range_start + 100
   other_args = "feature=gene;content-type=application/json"
-  url = f"{base_url}{chromosome}:{position_below_threshold}-{position_above_threshold}?{other_args}"
+  url = f"{base_url}{chromosome}:{position_range_start}-{position_range_end}?{other_args}"
   response = requests.get(url)
   if response.status_code == 200:
     data = response.json()
