@@ -51,7 +51,12 @@ def fetch_gene_annotations(chromosome, position):
   if response.status_code == 200:
     data = response.json()
     if data:
-      return data[0]["gene_id"]
+      result = []
+      useful_data_list = ["external_name", "gene_id", "biotype", "description"]
+      for item in data:
+        useful_data = {key: item[key] for key in useful_data_list if key in item}
+        result.append(useful_data)
+      return result
     else:
       return None
   else:
@@ -97,11 +102,15 @@ for snp in snp_data:
   print("Fetching gene annotations...")
   gene_info = fetch_gene_annotations(chromosome, position)
   if gene_info is not None:
-    print(f"Gene ID: {gene_info}")
-    snp["gene_id"] = gene_info
+    print(f"Gene annotations: {gene_info}")
+    for key in gene_info[0].keys():
+      snp[key] = gene_info[0][key]
   else:
     print("No gene annotations found.")
+    snp["external_name"] = None
     snp["gene_id"] = None
+    snp["biotype"] = None
+    snp["description"] = None
 
 # Post-process the data
 print("Post-processing the data...")
