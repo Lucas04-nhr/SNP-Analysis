@@ -1,0 +1,229 @@
+---
+title: "association"
+output: html_document
+date: "2024-12-21"
+---
+
+```{r library, include=FALSE}
+library(tidyverse)
+library(ggforce)
+library(ggprism)
+library(stringr)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(ggrepel)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r snp_gene}
+#导入SNP位点和确定名称的基因
+Bj_snp_gene0<-read.csv("data.12.16/bac_age_BJ_snp.csv")
+df<-Bj_snp_gene0[,c(1,3,4)]
+df <- df %>% mutate(across(where(is.character), ~na_if(., "")))
+df1 <- na.omit(df)
+```
+
+```{r snp_bac}
+#导入SNP、BONF和对应菌群
+Bj_snp_bac0<-read.csv("plot12.01/bac_age_BJ_rel.csv")
+df2<-Bj_snp_bac0[,c(2,5,11)]
+```
+
+
+```{r snp_bac+gene}
+#合并SNP、BONF、Bacteria、external_name、去除NA
+df1
+df2
+merged_df <- merge(df2, df1[, c("SNP", "external_name", "gene_id")], by = "SNP", all.x = TRUE)
+merged_df
+merged_df_clean <- merged_df[!duplicated(merged_df), ]
+merged_df_clean
+merged_df_clean <- na.omit(merged_df_clean)
+df3<-merged_df_clean
+```
+```{r Group_bac}
+#找到一个菌群对应的多个基因
+df3
+unique(df3$Bacteria)
+df3<-df3 %>%
+  arrange(BONF)
+# 按Bacteria分组
+grouped_bac_df <- df3 %>%
+  group_by(Bacteria) %>%
+  summarise(
+    BONF = BONF,
+    SNP = SNP,
+    External_Name = external_name,
+    Gene_ID = gene_id
+  )
+grouped_bac_df
+```
+
+```{r export}
+grouped_bac_df
+write.csv(grouped_bac_df, file = "data12.21/Beijing_bac_snp_gene.csv", row.names = F)
+bac_gene<-grouped_bac_df[,c(1,4)]
+bac_gene
+```
+
+```{r import_disease}
+#引入基因对应的疾病分析结果
+library(readxl)
+Bj_dis<- read_excel("data.12.16/metascape_result.t2vdk7pef.xlsx")
+df4<-Bj_dis[,c(1,7:10)]
+df4
+```
+
+```{r connect}
+#GWAS (NHGRI-EBI)列
+df4
+# 分割GWAS列，以;为间隔分开
+data_long <- separate_rows(df4, `GWAS (NHGRI-EBI)`,sep = ";", convert = FALSE)
+data_long_clean <- data_long %>% filter(!is.na(`GWAS (NHGRI-EBI)`))
+data_long
+data_long_clean
+unique(data_long_clean$`GWAS (NHGRI-EBI)`)
+```
+
+```{r connect}
+Gwas<-data_long_clean[,c(1,2)]
+Gwas
+```
+
+```{r plot}
+library(tidyverse)
+# devtools::install_github("davidsjoberg/ggsankey")
+library(ggsankey)
+library(ggplot2)
+#install.packages("cols4all")
+library(cols4all)
+#BiocManager::install("dittoSeq")
+library(dittoSeq)
+```
+
+```{r plot}
+#绘制桑基图
+data <- Gwas %>% make_long(MyList, `GWAS (NHGRI-EBI)`)
+data
+##'@指定绘图显示顺序
+data$node <- factor(data$node, levels = c(unique(Gwas$`GWAS (NHGRI-EBI)`),unique(Gwas$MyList)))
+data
+Gwas
+```
+```{r plot}
+#绘制桑基图
+bac_gene<-df3[,3:4]
+dataBC <- bac_gene %>% make_long(Bacteria , external_name)
+bac_gene
+dataBC
+##'@指定绘图显示顺序
+dataBC$node <- factor(dataBC$node, levels = c(sort(unique(bac_gene$external_name),decreasing = T),sort(unique(bac_gene$Bacteria),decreasing = T)))
+dataBC
+```
+
+```{r plot}
+pB_C<-ggplot(dataBC, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  #设置
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              #node.fill=dittoColors()[1:36],#节点颜色，[1:36]数值需要根据自己的数据进行修改
+              width=0.2) + #node的宽度
+  #设置桑基图文字
+  geom_sankey_text(size = 2,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  #隐藏图例
+  theme(legend.position = 'none') 
+ggsave("Bacteria_gene.pdf", plot = pB_C, width = 9, height =6, units = "in", dpi = 300)
+pB_C
+
+```
+
+```{r plot}
+p<-ggplot(data, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  #设置
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              #node.fill=dittoColors()[1:36],#节点颜色，[1:36]数值需要根据自己的数据进行修改
+              width=0.2) + #node的宽度
+  #设置桑基图文字
+  geom_sankey_text(size = 3,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  #隐藏图例
+  theme(legend.position = 'none') 
+ggsave("GWAS_(NHGRI-EBI).pdf", plot = p, width = 25, height =20, units = "in", dpi = 300)
+
+```
+
+```{r slect}
+#菌种Actinomyces_oris绘图结果
+bac_gene
+bac_Actinomyces_oris<-bac_gene %>% filter(Bacteria=="Actinomyces oris")
+Gwas1<- Gwas %>% filter( MyList %in% as.vector(bac_Actinomyces_oris$External_Name))
+
+data1 <- Gwas1 %>% make_long(MyList, `GWAS (NHGRI-EBI)`)
+##'@指定绘图显示顺序
+data1$node <- factor(data1$node, levels = c(unique(Gwas1$`GWAS (NHGRI-EBI)`),unique(Gwas1$MyList)))
+data1
+
+ggplot(data1, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  #设置
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              #node.fill=dittoColors()[1:36],#节点颜色，[1:36]数值需要根据自己的数据进行修改
+              width=0.2) + #node的宽度
+  #设置桑基图文字
+  geom_sankey_text(size = 3,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  #隐藏图例
+  theme(legend.position = 'none') 
+
+
+```
+
+```{r slect}
+#指定菌种绘图结果
+bac_gene
+bac<-bac_gene %>% filter(Bacteria=="Staphylococcus epidermidis")
+Gwas1<- Gwas %>% filter( MyList %in% as.vector(bac$External_Name))
+
+data1 <- Gwas1 %>% make_long(MyList, `GWAS (NHGRI-EBI)`)
+##'@指定绘图显示顺序
+data1$node <- factor(data1$node, levels = c(unique(Gwas1$`GWAS (NHGRI-EBI)`),unique(Gwas1$MyList)))
+data1
+
+ggplot(data1, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  #设置
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              #node.fill=dittoColors()[1:36],#节点颜色，[1:36]数值需要根据自己的数据进行修改
+              width=0.2) + #node的宽度
+  #设置桑基图文字
+  geom_sankey_text(size = 3,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  #隐藏图例
+  theme(legend.position = 'none') 
+
+
+```
