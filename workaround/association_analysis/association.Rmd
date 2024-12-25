@@ -1,0 +1,172 @@
+---
+title: "association"
+output: html_document
+date: "2024-12-21"
+---
+
+```{r library, include=FALSE}
+library(tidyverse)
+library(ggforce)
+library(ggprism)
+library(stringr)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(ggrepel)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r snp_gene}
+Bj_snp_gene0<-read.csv("data.12.16/bac_age_BJ_snp.csv")
+df<-Bj_snp_gene0[,c(1,3,4)]
+df <- df %>% mutate(across(where(is.character), ~na_if(., "")))
+df1 <- na.omit(df)
+```
+
+```{r snp_bac}
+Bj_snp_bac0<-read.csv("plot12.01/bac_age_BJ_rel.csv")
+df2<-Bj_snp_bac0[,c(2,5,11)]
+```
+
+
+```{r snp_bac+gene}
+df1
+df2
+merged_df <- merge(df2, df1[, c("SNP", "external_name", "gene_id")], by = "SNP", all.x = TRUE)
+merged_df
+merged_df_clean <- merged_df[!duplicated(merged_df), ]
+merged_df_clean
+merged_df_clean <- na.omit(merged_df_clean)
+df3<-merged_df_clean
+```
+```{r Group_bac}
+df3
+unique(df3$Bacteria)
+df3<-df3 %>%
+  arrange(BONF)
+# 按Bacteria分组
+grouped_bac_df <- df3 %>%
+  group_by(Bacteria) %>%
+  summarise(
+    BONF = BONF,
+    SNP = SNP,
+    External_Name = external_name,
+    Gene_ID = gene_id
+  )
+grouped_bac_df
+```
+
+```{r export}
+grouped_bac_df
+write.csv(grouped_bac_df, file = "data12.21/Beijing_bac_snp_gene.csv", row.names = F)
+bac_gene<-grouped_bac_df[,c(1,4)]
+```
+
+```{r import_disease}
+library(readxl)
+Bj_dis<- read_excel("data.12.16/metascape_result.t2vdk7pef.xlsx")
+df4<-Bj_dis[,c(1,7:10)]
+df4
+```
+
+```{r connect}
+library(ggalluvial)
+# 创建数据框
+df <- data.frame(
+  from = c("A1", "A1", "A2", "A2", "A3", "A3"),
+  to = c("B1", "B2", "B1", "B2", "B1", "B2"),
+  Freq = c(10, 20, 30, 40, 50, 60)
+)
+# 绘制桑基图h u
+# 假设您有一个名为df的数据框，其中包含桑基图所需的数据
+ggplot(df, aes(y = Freq, axis1 = from, axis2 = to)) +
+  geom_alluvium(aes(fill = to), width = 1/12) +
+  geom_stratum(width = 1/12, fill = "black", color = "grey") +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)))
+```
+
+```{r connect}
+df4
+# 分割GWAS列
+data_long <- separate_rows(df4, `GWAS (NHGRI-EBI)`,sep = ";", convert = FALSE)
+data_long_clean <- data_long %>% filter(!is.na(`GWAS (NHGRI-EBI)`))
+data_long
+data_long_clean
+unique(data_long_clean$`GWAS (NHGRI-EBI)`)
+```
+
+```{r connect}
+Gwas<-data_long_clean[,c(1,2)]
+Gwas
+```
+
+```{r plot}
+library(tidyverse)
+# devtools::install_github("davidsjoberg/ggsankey")
+library(ggsankey)
+library(ggplot2)
+#install.packages("cols4all")
+library(cols4all)
+#BiocManager::install("dittoSeq")
+library(dittoSeq)
+```
+
+```{r plot}
+data <- Gwas %>% make_long(MyList, `GWAS (NHGRI-EBI)`)
+data
+##'@指定绘图显示顺序
+data$node <- factor(data$node, levels = c(rev(unique(Gwas$`GWAS (NHGRI-EBI)`)),rev(unique(Gwas$MyList))))
+data
+```
+
+```{r plot}
+ggplot(data, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  #设置
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              #node.fill=dittoColors()[1:36],#节点颜色，[1:36]数值需要根据自己的数据进行修改
+              width=0.2) + #node的宽度
+  #设置桑葚图文字
+  geom_sankey_text(size = 3,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  #隐藏图例
+  theme(legend.position = 'none') 
+
+```
+
+```{r slect}
+bac_gene
+bac_Actinomyces_oris<-bac_gene %>% filter(Bacteria=="Actinomyces oris")
+Gwas1<- Gwas %>% filter( MyList %in% as.vector(bac_Actinomyces_oris$External_Name))
+
+data1 <- Gwas1 %>% make_long(MyList, `GWAS (NHGRI-EBI)`)
+##'@指定绘图显示顺序
+data1$node <- factor(data1$node, levels = c(rev(unique(Gwas1$`GWAS (NHGRI-EBI)`)),rev(unique(Gwas1$MyList))))
+data1
+
+mycol3 <- c("red", "green", "blue") # 定义一个包含三种颜色的颜色向量
+
+##'@代码一
+ggplot(data1, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+               fill = node, label = node)) +
+  scale_fill_manual(values = mycol3)+
+  
+  geom_sankey(flow.alpha = 0.5, #条带不透明度
+                  smooth = 7, #条带弯曲度
+                  width = 0.18) + #节点宽度
+  geom_sankey_text(size = 3.2, color = 'black') +
+  theme_void() +
+  theme(legend.position = 'none') #隐藏图例
+
+ggsave("桑基图.jpg",width = 6, height = 4)
+
+```
