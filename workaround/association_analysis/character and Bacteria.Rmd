@@ -186,7 +186,7 @@ Sebum<-data.frame(Character="Sebum",Bacteria=s_bac[,1])
 Sebum
 ```
 
-```{r plot}
+```{r plot1}
 library(tidyverse)
 # devtools::install_github("davidsjoberg/ggsankey")
 library(ggsankey)
@@ -197,7 +197,7 @@ library(cols4all)
 library(dittoSeq)
 ```
 
-```{r plot}
+```{r plot2}
 #绘制桑基图
 c_all<-rbind(Moisture,Gloss,Sebum)
 data <- c_all %>% make_long(Character, Bacteria)
@@ -207,7 +207,7 @@ data$node <- factor(data$node, levels = c(unique(c_all$Bacteria),unique(c_all$Ch
 data
 ```
 
-```{r plot}
+```{r plot3}
 C_B<-ggplot(data, aes(x = x, next_x = next_x, node = node, next_node = next_node,
                 fill = node, label = node)) +
   #设置

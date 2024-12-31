@@ -23,7 +23,7 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ```{r snp_gene}
 #导入SNP位点和确定名称的基因
-Bj_snp_gene0<-read.csv("data.12.16/bac_age_BJ_snp.csv")
+Bj_snp_gene0<-read.csv("result/analysis/snp_allocation/bac_age_BJ_snp.csv")
 df<-Bj_snp_gene0[,c(1,3,4)]
 df <- df %>% mutate(across(where(is.character), ~na_if(., "")))
 df1 <- na.omit(df)
@@ -31,7 +31,7 @@ df1 <- na.omit(df)
 
 ```{r snp_bac}
 #导入SNP、BONF和对应菌群
-Bj_snp_bac0<-read.csv("plot12.01/bac_age_BJ_rel.csv")
+Bj_snp_bac0<-read.csv("result/analysis/snp_allocation/bac_age_BJ_rel.csv")
 df2<-Bj_snp_bac0[,c(2,5,11)]
 ```
 
@@ -80,7 +80,7 @@ df4<-Bj_dis[,c(1,7:10)]
 df4
 ```
 
-```{r connect}
+```{r connect1}
 #GWAS (NHGRI-EBI)列
 df4
 # 分割GWAS列，以;为间隔分开
@@ -91,12 +91,12 @@ data_long_clean
 unique(data_long_clean$`GWAS (NHGRI-EBI)`)
 ```
 
-```{r connect}
+```{r connect2}
 Gwas<-data_long_clean[,c(1,2)]
 Gwas
 ```
 
-```{r plot}
+```{r plot1}
 library(tidyverse)
 # devtools::install_github("davidsjoberg/ggsankey")
 library(ggsankey)
@@ -107,7 +107,7 @@ library(cols4all)
 library(dittoSeq)
 ```
 
-```{r plot}
+```{r plot2}
 #绘制桑基图
 data <- Gwas %>% make_long(MyList, `GWAS (NHGRI-EBI)`)
 data
@@ -116,7 +116,7 @@ data$node <- factor(data$node, levels = c(unique(Gwas$`GWAS (NHGRI-EBI)`),unique
 data
 Gwas
 ```
-```{r plot}
+```{r plot3}
 #绘制桑基图
 bac_gene<-df3[,3:4]
 dataBC <- bac_gene %>% make_long(Bacteria , external_name)
@@ -127,7 +127,7 @@ dataBC$node <- factor(dataBC$node, levels = c(sort(unique(bac_gene$external_name
 dataBC
 ```
 
-```{r plot}
+```{r plot4}
 pB_C<-ggplot(dataBC, aes(x = x, next_x = next_x, node = node, next_node = next_node,
                 fill = node, label = node)) +
   #设置
@@ -148,7 +148,7 @@ pB_C
 
 ```
 
-```{r plot}
+```{r plot5}
 p<-ggplot(data, aes(x = x, next_x = next_x, node = node, next_node = next_node,
                 fill = node, label = node)) +
   #设置
@@ -168,7 +168,7 @@ ggsave("GWAS_(NHGRI-EBI).pdf", plot = p, width = 25, height =20, units = "in", d
 
 ```
 
-```{r slect}
+```{r slect1}
 #菌种Actinomyces_oris绘图结果
 bac_gene
 bac_Actinomyces_oris<-bac_gene %>% filter(Bacteria=="Actinomyces oris")
@@ -198,7 +198,7 @@ ggplot(data1, aes(x = x, next_x = next_x, node = node, next_node = next_node,
 
 ```
 
-```{r slect}
+```{r slect2}
 #指定菌种绘图结果
 bac_gene
 bac<-bac_gene %>% filter(Bacteria=="Staphylococcus epidermidis")
