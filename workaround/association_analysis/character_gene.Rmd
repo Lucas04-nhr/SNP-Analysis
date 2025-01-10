@@ -1,0 +1,265 @@
+---
+title: "character_gene"
+output: html_document
+date: "2025-1-10"
+---
+
+```{r library, include=FALSE}
+library(tidyverse)
+library(ggforce)
+library(ggprism)
+library(stringr)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(ggrepel)
+```
+
+```{r snp_gene}
+#导入SNP位点和确定名称的基因
+Bj_snp_gene0<-read.csv("data.12.16/bac_age_BJ_snp.csv")
+df<-Bj_snp_gene0[,c(1,3,4)]
+df <- df %>% mutate(across(where(is.character), ~na_if(., "")))
+df1 <- na.omit(df)
+```
+
+```{r snp_bac}
+#导入SNP、BONF和对应菌群
+Bj_snp_bac0<-read.csv("plot12.01/bac_age_BJ_rel.csv")
+df2<-Bj_snp_bac0[,c(2,5,11)]
+```
+
+
+```{r snp_bac+gene}
+#合并SNP、BONF、Bacteria、external_name、去除NA
+merged_df <- merge(df2, df1[, c("SNP", "external_name", "gene_id")], by = "SNP", all.x = TRUE)
+merged_df_clean <- merged_df[!duplicated(merged_df), ]
+merged_df_clean <- na.omit(merged_df_clean)
+df3<-merged_df_clean
+```
+
+```{r select}
+bac<-unique(df3$Bacteria)
+cha<-read.csv(file = "data.11.08/manifestotype.csv")
+cha_bac<-read.csv(file = "data.11.08/Beijing.csv")
+bj_index <- grepl("^BJ",cha$Sample.id)
+# 使用逻辑索引来提取符合条件的行
+bj_df <- cha[bj_index, ]
+grouped_bac_df <- df3 %>%
+  group_by(Bacteria) %>%
+  summarise(
+    BONF = BONF,
+    SNP = SNP,
+    External_Name = external_name,
+    Gene_ID = gene_id
+  )
+bac_gene<-grouped_bac_df[,c(1,4)]
+head(bac_gene)
+```
+
+
+```{r positive}
+columns_to_process <- c( "Moisture", "Gloss","Sebum","pH","Tivi")
+result_list_P <- list()
+for (col in columns_to_process) {
+  # 检查列名是否在数据框中存在
+  # 正相关菌群
+  if (col %in% names(bj_df)) {
+    
+     x<-as.numeric(bj_df[[col]])
+mean_value <- mean(x)
+
+# 单样本t检验，检验数据集的平均值是否显著不同于0
+t_test_result <- t.test(x, mu = 0)
+
+# 计算每个值与平均值的Z分数
+z_scores <- (x - mean_value) / sd(x)
+
+# 确定显著性阈值，这里使用0.1的显著性水平
+alpha <- 0.05
+critical_z <- qnorm(1 - alpha/2)  # 双尾检验
+significant_values <- x[z_scores > critical_z]
+x_S <-bj_df %>% filter(bj_df[[col]] %in% as.character(significant_values))
+name<-x_S[,1]
+cha_bac_clean<- cha_bac  %>% filter(Species %in% bac)
+x_name_bac <- cha_bac_clean %>% select(Species,all_of(name))
+#对这几个人的结果求平均相对丰度，降序排序,取大于0.005的12个结果
+mean_x <- x_name_bac %>%mutate(.,mean=rowMeans(x_name_bac[,-1])) %>% arrange(desc(mean))
+x_bac<- mean_x %>% filter(mean>0.005)
+ result_list_P[[paste(col,"P")]]<-data.frame(Character=paste(col,"P"),Bacteria=x_bac[,1])
+  }
+  }
+    
+```
+
+
+```{r negative}
+columns_to_process <- c( "Moisture", "Gloss","pH")
+result_list_N <- list()
+for (col in columns_to_process) {
+# 负相关菌群
+  if (col %in% names(bj_df)) {
+     x<-as.numeric(bj_df[[col]])
+mean_value <- mean(x)
+# 单样本t检验，检验数据集的平均值是否显著不同于0
+t_test_result <- t.test(x, mu = 0)
+# 打印t检验结果
+# 计算每个值与平均值的Z分数
+z_scores <- (x - mean_value) / sd(x, na.rm = TRUE)  # 注意：添加了na.rm = TRUE来处理可能的NA值
+# 确定显著性阈值，这里使用0.05的显著性水平
+alpha <- 0.05
+critical_z <- qnorm(1 - alpha/2)  # 双尾检验的临界z值
+critical_z_neg <- -critical_z     # 显著小于平均值的临界z值（负值）
+# 找出Z分数小于临界负Z值的数据点，即显著小于平均值的数据点
+significant_values <- x[z_scores < critical_z_neg]
+
+x_S <-bj_df %>% filter(bj_df[[col]] %in% as.character(significant_values))
+name<-x_S[,1]
+cha_bac_clean<- cha_bac  %>% filter(Species %in% bac)
+x_name_bac <- cha_bac_clean %>% select(Species,all_of(name))
+head(x_name_bac)
+#对这几个人的结果求平均相对丰度，降序排序,取大于0.005的12个结果
+mean_x <- x_name_bac %>%mutate(.,mean=rowMeans(x_name_bac[,-1])) %>% arrange(desc(mean))
+x_bac<- mean_x %>% filter(mean>0.005)
+ result_list_N[[paste(col,"N")]]<-data.frame(Character=paste(col,"N"),Bacteria=x_bac[,1])
+  }
+}
+
+```
+
+
+```{r plot_library}
+library(tidyverse)
+# devtools::install_github("davidsjoberg/ggsankey")
+library(ggsankey)
+library(ggplot2)
+#install.packages("cols4all")
+library(cols4all)
+#BiocManager::install("dittoSeq")
+library(dittoSeq)
+```
+
+```{r plot_cha_Gene}
+combined_df_P <- do.call(rbind, result_list_P)
+combined_df_N <- do.call(rbind, result_list_N)
+combined_df<-rbind(combined_df_P,combined_df_N)
+dataBC <- bac_gene %>% make_long(Bacteria , External_Name)
+head(bac_gene)
+# 使用left_join函数进行左连接
+merged_df <- left_join(combined_df, bac_gene, by = "Bacteria")
+cha_gene<- merged_df[,c(1,3)]
+```
+
+
+```{r plot_data}
+c_all<-cha_gene
+data <- c_all %>% make_long(Character, External_Name)
+##'@指定绘图显示顺序
+data$node <- factor(data$node, levels = c(unique(c_all$External_Name),unique(c_all$Character)))
+head(data)
+```
+
+```{r plot}
+C_B<-ggplot(data, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              #node.fill=dittoColors()[1:36],#节点颜色，[1:36]数值需要根据自己的数据进行修改
+              width=0.2) + #node的宽度
+  geom_sankey_text(size = 2,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  theme(legend.position = 'none') 
+ggsave("Characte_gene_0.05.pdf", plot = C_B, width = 9, height =6, units = "in", dpi = 300)
+C_B
+
+```
+
+
+```{r plot_data_M}
+combined_df<-rbind(as.data.frame(result_list_P[1],col.names = ""),as.data.frame(result_list_N[1],col.names = ""))
+merged_df <- left_join(combined_df, bac_gene, by = "Bacteria")
+cha_gene<- merged_df[,c(1,3)]
+c_all<-cha_gene
+data <- c_all %>% make_long(Character, External_Name)
+data$node <- factor(data$node, levels = c(unique(c_all$External_Name),unique(c_all$Character)))
+head(data)
+```
+
+```{r plot_M}
+M_B<-ggplot(data, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              width=0.2) + #node的宽度
+  geom_sankey_text(size = 2,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  theme(legend.position = 'none') 
+ggsave("Characte_gene_M.pdf", plot = M_B, width = 9, height =6, units = "in", dpi = 300)
+M_B
+
+```
+
+
+```{r plot_data_G}
+combined_df<-rbind(as.data.frame(result_list_P[2],col.names = ""),as.data.frame(result_list_N[2],col.names = ""))
+merged_df <- left_join(combined_df, bac_gene, by = "Bacteria")
+cha_gene<- merged_df[,c(1,3)]
+c_all<-cha_gene
+data <- c_all %>% make_long(Character, External_Name)
+data$node <- factor(data$node, levels = c(unique(c_all$External_Name),unique(c_all$Character)))
+head(data)
+```
+
+```{r plot_G}
+G_B<-ggplot(data, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              #node.fill=dittoColors()[1:36],#节点颜色，[1:36]数值需要根据自己的数据进行修改
+              width=0.2) + #node的宽度
+  geom_sankey_text(size = 2,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  theme(legend.position = 'none') 
+ggsave("Characte_gene_G.pdf", plot = G_B, width = 9, height =6, units = "in", dpi = 300)
+G_B
+
+```
+
+
+```{r plot_data_P}
+combined_df<-rbind(as.data.frame(result_list_P[4],col.names = ""),as.data.frame(result_list_N[3],col.names = ""))
+merged_df <- left_join(combined_df, bac_gene, by = "Bacteria")
+cha_gene<- merged_df[,c(1,3)]
+c_all<-cha_gene
+data <- c_all %>% make_long(Character, External_Name)
+data$node <- factor(data$node, levels = c(unique(c_all$External_Name),unique(c_all$Character)))
+head(data)
+```
+
+```{r plot_P}
+P_B<-ggplot(data, aes(x = x, next_x = next_x, node = node, next_node = next_node,
+                fill = node, label = node)) +
+  geom_sankey(flow.fill="#DFDFDF",#连线颜色
+              flow.alpha = 0.5, ## 条带透明度
+              flow.color="grey60",#连线边框颜色
+              #node.fill=dittoColors()[1:36],#节点颜色，[1:36]数值需要根据自己的数据进行修改
+              width=0.2) + #node的宽度
+  geom_sankey_text(size = 2,#文字大小
+                   color= "black",#文字颜色
+                   hjust=1) + #文字位置，右对齐
+  theme_void()+
+  theme(legend.position = 'none') 
+ggsave("Characte_gene_P.pdf", plot = P_B, width = 9, height =6, units = "in", dpi = 300)
+P_B
+
+```
+ 
